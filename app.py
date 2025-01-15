@@ -1,6 +1,6 @@
 import os
 import streamlit as st
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # You can remove this since we won't use .env anymore
 from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import FAISS
@@ -57,12 +57,13 @@ def get_conversation_chain(vectorstore):
         return None
 
     try:
-        # Check for API token
-        api_token = os.getenv('HUGGINGFACE_API_TOKEN')
+        # Access the Hugging Face token from Streamlit's secrets
+        api_token = st.secrets["huggingface"]["api_token"]
         if not api_token:
-            st.error("Missing HUGGINGFACE_API_TOKEN in .env file")
+            st.error("Missing HUGGINGFACE_API_TOKEN in secrets.toml")
             return None
 
+        # Create the HuggingFace model
         llm = HuggingFaceHub(
             repo_id="google/flan-t5-base",
             model_kwargs={
@@ -73,11 +74,13 @@ def get_conversation_chain(vectorstore):
             huggingfacehub_api_token=api_token
         )
 
+        # Set up memory for the conversation
         memory = ConversationBufferMemory(
             memory_key='chat_history',
             return_messages=True
         )
 
+        # Create the conversation chain
         conversation_chain = ConversationalRetrievalChain.from_llm(
             llm=llm,
             retriever=vectorstore.as_retriever(),
@@ -109,20 +112,14 @@ def handle_userinput(user_question):
 
 
 def main():
-    # Ensure .env file is loaded
-    load_dotenv()
-
-    if not os.getenv('HUGGINGFACE_API_TOKEN'):
-        st.error("Please create a .env file with your HUGGINGFACE_API_TOKEN")
-        return
-
-    st.set_page_config(page_title="Chat with multiple PDFs", page_icon=":books:")
-    st.write(css, unsafe_allow_html=True)
-
+    # No need to load .env anymore as we are using secrets.toml for Hugging Face token
     if "conversation" not in st.session_state:
         st.session_state.conversation = None
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = None
+
+    st.set_page_config(page_title="Chat with multiple PDFs", page_icon=":books:")
+    st.write(css, unsafe_allow_html=True)
 
     st.header("Chat with multiple PDFs :books:")
 
